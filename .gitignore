@@ -1,0 +1,15 @@
+# Docker volumes
+/data/matomo/
+/data/mysql/
+/data/redis/
+
+# Environment variables
+.env
+
+# IDE files
+.idea/
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,154 @@
+services:
+  # 1. MySQL Database
+  db:
+    image: mysql:5.7
+    container_name: matomo-mysql
+    restart: always
+    ports:
+      - "13306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./config/mysql/my.cnf:/etc/mysql/my.cnf
+      - ./data/mysql/logs:/var/log/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: matomo_root_password
+      MYSQL_DATABASE: matomo
+      MYSQL_USER: matomo
+      MYSQL_PASSWORD: matomo_password
+    networks:
+      - matomo-network
+
+  # 2. Redis for cache and queued tracking
+  redis:
+    image: redis:alpine
+    container_name: matomo-redis
+    restart: always
+    ports:
+      - "16379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - matomo-network
+
+  # 3. PHP container for Matomo dashboard
+  matomo-web:
+    image: matomo:latest
+    container_name: matomo-web
+    restart: always
+    volumes:
+      - matomo_data:/var/www/html
+      - ./config/matomo:/var/www/html/config:rw
+    environment:
+      MATOMO_DATABASE_HOST: db
+      MATOMO_DATABASE_ADAPTER: mysql
+      MATOMO_DATABASE_TABLES_PREFIX: matomo_
+      MATOMO_DATABASE_USERNAME: matomo
+      MATOMO_DATABASE_PASSWORD: matomo_password
+      MATOMO_DATABASE_DBNAME: matomo
+      REDIS_HOST: redis
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - matomo-network
+
+  # 4. PHP container for handling tracking requests
+  matomo-tracker:
+    image: matomo:latest
+    container_name: matomo-tracker
+    restart: always
+    volumes:
+      - matomo_data:/var/www/html
+      - ./config/matomo:/var/www/html/config:rw
+    environment:
+      MATOMO_DATABASE_HOST: db
+      MATOMO_DATABASE_ADAPTER: mysql
+      MATOMO_DATABASE_TABLES_PREFIX: matomo_
+      MATOMO_DATABASE_USERNAME: matomo
+      MATOMO_DATABASE_PASSWORD: matomo_password
+      MATOMO_DATABASE_DBNAME: matomo
+      REDIS_HOST: redis
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+      - redis
+      - matomo-web
+    networks:
+      - matomo-network
+
+  # 5. PHP container for queued tracking worker and cron jobs
+  matomo-worker:
+    image: matomo:latest
+    container_name: matomo-worker
+    restart: always
+    volumes:
+      - matomo_data:/var/www/html
+      - ./config/matomo:/var/www/html/config:rw
+      - ./config/supervisor/matomo-queue.conf:/etc/supervisor/conf.d/matomo-queue.conf:rw
+      - ./config/cron/matomo-archive:/etc/cron.d/matomo-archive:rw
+    environment:
+      MATOMO_DATABASE_HOST: db
+      MATOMO_DATABASE_ADAPTER: mysql
+      MATOMO_DATABASE_TABLES_PREFIX: matomo_
+      MATOMO_DATABASE_USERNAME: matomo
+      MATOMO_DATABASE_PASSWORD: matomo_password
+      MATOMO_DATABASE_DBNAME: matomo
+      REDIS_HOST: redis
+    depends_on:
+      - db
+      - redis
+      - matomo-web
+    networks:
+      - matomo-network
+    command: >
+      sh -c "apt-get update; apt-get install -y cron supervisor;
+             # Set permissions for cron file
+             chmod 0644 /etc/cron.d/matomo-archive;
+
+             # Create log directory for supervisor
+             mkdir -p /var/log/supervisor;
+
+             # Start cron
+             service cron start;
+
+             # Run supervisor in foreground to keep container running
+             exec supervisord -n -c /etc/supervisor/supervisord.conf"
+
+  # 6. K6 for load testing
+  k6:
+    image: grafana/k6
+    container_name: k6
+    restart: "no"
+    networks:
+      - matomo-network
+    volumes:
+      - ./tests/k6:/scripts
+    depends_on:
+      - matomo-tracker
+
+networks:
+  matomo-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/mysql
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
+  matomo_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/matomo
