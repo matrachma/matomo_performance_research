@@ -21,7 +21,7 @@ The setup consists of the following containers:
 
 1. Clone this repository:
    ```
-   git clone https://github.com/yourusername/matomo_performance_research.git
+   git clone https://github.com/matrachma/matomo_performance_research.git
    cd matomo_performance_research
    ```
 
