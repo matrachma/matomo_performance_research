@@ -75,7 +75,7 @@ export function setup() {
 
 // --- Main Test Logic ---
 export default function () {
-    const matomoUrl = 'http://matomo-web/matomo.php'; // e.g., 'https://stats.your-massive-site.com/matomo.php'
+    const matomoUrl = 'http://matomo-tracker/matomo.php'; // e.g., 'https://stats.your-massive-site.com/matomo.php'
     const siteId = '1';     // Your Matomo site ID
     const authToken = ''; // Optional: Your Matomo auth token
 

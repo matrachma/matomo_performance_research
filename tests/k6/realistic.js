@@ -9,7 +9,7 @@ import { sleep } from 'k6';
 // ######################################################################
 
 // The base URL of your Matomo server's tracker endpoint
-const MATOMO_URL = 'http://matomo-web/matomo.php';
+const MATOMO_URL = 'http://matomo-tracker/matomo.php';
 
 // The Site ID you want to send traffic to
 const IDSITE = '1';
