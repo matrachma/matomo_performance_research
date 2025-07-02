@@ -23,6 +23,7 @@ The setup consists of the following containers:
    ```
    git clone https://github.com/matrachma/matomo_performance_research.git
    cd matomo_performance_research
+   mkdir -p data/matomo data/mysql data/redis
    ```
 
 2. Start the containers:
